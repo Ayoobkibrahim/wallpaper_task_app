@@ -1,38 +1,54 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:walpapper_task_app/configs/mixins/mediaquery_extension.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:provider/provider.dart';
+import 'package:walpapper_task_app/feature/view_model/photo_view_model.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  List<String> tabName = [
+    'Activity',
+    'Community',
+    'Shop',
+  ];
+
+  int currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final photoViewModel = Provider.of<PhotoViewModel>(context, listen: false);
+    photoViewModel.fetchPhotos(reset: true); // Fetch initial data
+  }
 
   @override
   Widget build(BuildContext context) {
-    double scrHeight = context.mediaQueryHeight;
-    double scrWidth = context.mediaQueryWidth;
+    double scrHeight = MediaQuery.of(context).size.height;
+    double scrWidth = MediaQuery.of(context).size.width;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         backgroundColor: Colors.black,
         appBar: AppBar(
           backgroundColor: Colors.black,
-          leading: GestureDetector(
-            child: const Icon(
-              Icons.arrow_back_ios,
-              color: Colors.white,
-            ),
+          leading: const Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
           ),
           actions: [
-            CircleAvatar(
-              child: Container(
-                height: scrHeight * 0.04,
-                width: scrWidth * 0.2,
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(20),
-                ),
+            const CircleAvatar(
+              backgroundImage: CachedNetworkImageProvider(
+                'https://via.placeholder.com/150', // Profile image URL
               ),
             ),
-            (scrWidth * 0.03).width,
+            SizedBox(width: scrWidth * 0.03),
             Container(
               height: scrHeight * 0.04,
               width: scrWidth * 0.2,
@@ -45,78 +61,131 @@ class HomeScreen extends StatelessWidget {
                   'Follow',
                   style: TextStyle(
                     color: Colors.white,
+                    fontSize: 16,
                   ),
                 ),
               ),
             ),
-            (scrWidth * 0.04).width,
+            SizedBox(width: scrWidth * 0.04),
           ],
           bottom: TabBar(
-            indicatorColor: Colors.transparent, // Customize the indicator color
-            labelColor: Colors.black, // Active tab text color
-            unselectedLabelColor: Colors.grey,
+            onTap: (value) {
+              setState(() {
+                currentIndex = value;
+              });
+            },
+            labelColor: Colors.black,
+            unselectedLabelColor: Colors.white,
             dividerColor: Colors.transparent,
-            isScrollable: false,
             tabAlignment: TabAlignment.center,
             indicator: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
             ),
-            tabs: const [
-              Tab(
-                text: 'Activity 1',
+            tabs: List.generate(
+              tabName.length,
+              (index) => Tab(
+                child: currentIndex == index
+                    ? Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(20),
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Center(
+                          child: Text(
+                            tabName[index],
+                          ),
+                        ),
+                      )
+                    : Text(
+                        tabName[index],
+                      ),
               ),
-              Tab(
-                text: 'Activity 2',
+            ),
+          ),
+        ),
+        body: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: TabBarView(
+            children: [
+              const Center(
+                child: Text(
+                  'Activity Tab',
+                  style: TextStyle(color: Colors.black),
+                ),
               ),
-              Tab(
-                text: 'Activity 3',
+              const Center(
+                child: Text(
+                  'Community Tab',
+                  style: TextStyle(color: Colors.black),
+                ),
+              ),
+              Consumer<PhotoViewModel>(
+                builder: (context, viewModel, child) {
+                  if (viewModel.isLoading && viewModel.photos.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      await viewModel.fetchPhotos(reset: true);
+                    },
+                    child: MasonryGridView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 10,
+                      ),
+                      gridDelegate:
+                          const SliverSimpleGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                      ),
+                      mainAxisSpacing: 12, // Vertical space
+                      crossAxisSpacing: 12, // Horizontal space
+                      itemCount: viewModel.photos.length,
+                      itemBuilder: (context, index) {
+                        final photo = viewModel.photos[index];
+                        return ProductCard(
+                          imageUrl: photo.urls?.regular ?? '',
+                          title: photo.user?.username ?? 'Unknown User',
+                          likes: photo.likes ?? 0,
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            const Center(
-              child: Text(
-                'Content for Activity 1',
-                style: TextStyle(color: Colors.white),
-              ),
+        bottomNavigationBar: BottomNavigationBar(
+          backgroundColor: Colors.black,
+          selectedItemColor: Colors.red,
+          unselectedItemColor: Colors.grey,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: '',
             ),
-            const Center(
-              child: Text(
-                'Content for Activity 2',
-                style: TextStyle(color: Colors.white),
-              ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.search),
+              label: '',
             ),
-            Column(
-              children: [
-                const Text(
-                  'All Products',
-                  style: TextStyle(color: Colors.white),
-                ),
-                SizedBox(
-                  height: scrHeight*0.5,
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 8.0,
-                      mainAxisSpacing: 8.0,
-                      childAspectRatio: 1.0,
-                    ),
-                    itemCount: 2,
-                    itemBuilder: (context, index) {
-                      return ImageContainer(
-                        scrHeight: scrHeight * 0.4,
-                        scrWidth: scrWidth * 0.5,
-                        image: '',
-                      );
-                    },
-                  ),
-                ),
-              ],
+            BottomNavigationBarItem(
+              icon: Icon(Icons.notifications),
+              label: '',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person),
+              label: '',
             ),
           ],
         ),
@@ -125,76 +194,62 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class ImageContainer extends StatelessWidget {
-  const ImageContainer({
+class ProductCard extends StatelessWidget {
+  const ProductCard({
     super.key,
-    required this.scrHeight,
-    required this.scrWidth,
-    required this.image,
+    required this.imageUrl,
+    required this.title,
+    required this.likes,
   });
 
-  final double scrHeight;
-  final double scrWidth;
-  final String image;
+  final String imageUrl;
+  final String title;
+  final int likes;
 
   @override
   Widget build(BuildContext context) {
+    final photoViewModel = Provider.of<PhotoViewModel>(context, listen: false);
+
     return GestureDetector(
-      onTap: () {},
-      child: Column(
-        children: [
-          Container(
-            height: scrHeight,
-            width: scrWidth,
-            decoration: BoxDecoration(
-              color: Colors.red,
-              borderRadius: BorderRadius.circular(20),
+       onTap: () => photoViewModel.downloadImage(context, imageUrl),
+      child: Container(
+        margin: const EdgeInsets.all(4), // Optional margin
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) =>
+                    const Center(child: CircularProgressIndicator()),
+                errorWidget: (context, url, error) =>
+                    const Icon(Icons.error, color: Colors.black),
+              ),
             ),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: scrWidth * 0.06,
-                  top: scrHeight * 0.03,
-                  child: Container(
-                    height: scrHeight * 0.04,
-                    width: scrWidth * 0.2,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        '62',
-                        style: TextStyle(
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Center(
-                  child: CachedNetworkImage(
-                    fit: BoxFit.fill,
-                    imageUrl: image,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            const SizedBox(height: 8),
+            Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'data',
-                style: TextStyle(color: Colors.white),
+                title,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              Icon(
+              const Icon(
                 Icons.more_horiz,
-                color: Colors.white,
               )
             ],
-          )
-        ],
+          ),
+            const SizedBox(height: 4),
+          ],
+        ),
       ),
     );
   }

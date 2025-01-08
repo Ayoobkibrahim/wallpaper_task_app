@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:provider/provider.dart';
+import 'package:walpapper_task_app/feature/view/widgets/bottom_nav.dart';
+import 'package:walpapper_task_app/feature/view/widgets/product_card.dart';
 import 'package:walpapper_task_app/feature/view_model/photo_view_model.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,11 +22,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int currentIndex = 0;
 
+  void _onBottomNavTap(int index) {
+    setState(() {
+      currentIndex = index;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     final photoViewModel = Provider.of<PhotoViewModel>(context, listen: false);
-    photoViewModel.fetchPhotos(reset: true); // Fetch initial data
+    photoViewModel.fetchPhotos(reset: true);
   }
 
   @override
@@ -45,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             const CircleAvatar(
               backgroundImage: CachedNetworkImageProvider(
-                'https://via.placeholder.com/150', // Profile image URL
+                'https://via.placeholder.com/150',
               ),
             ),
             SizedBox(width: scrWidth * 0.03),
@@ -148,8 +156,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SliverSimpleGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                       ),
-                      mainAxisSpacing: 12, // Vertical space
-                      crossAxisSpacing: 12, // Horizontal space
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
                       itemCount: viewModel.photos.length,
                       itemBuilder: (context, index) {
                         final photo = viewModel.photos[index];
@@ -166,91 +174,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: Colors.black,
-          selectedItemColor: Colors.red,
-          unselectedItemColor: Colors.grey,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: '',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.search),
-              label: '',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.notifications),
-              label: '',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: '',
-            ),
-          ],
-        ),
+        bottomNavigationBar: const CustomBottomNavigationBar(),
       ),
     );
   }
 }
 
-class ProductCard extends StatelessWidget {
-  const ProductCard({
-    super.key,
-    required this.imageUrl,
-    required this.title,
-    required this.likes,
-  });
-
-  final String imageUrl;
-  final String title;
-  final int likes;
-
-  @override
-  Widget build(BuildContext context) {
-    final photoViewModel = Provider.of<PhotoViewModel>(context, listen: false);
-
-    return GestureDetector(
-       onTap: () => photoViewModel.downloadImage(context, imageUrl),
-      child: Container(
-        margin: const EdgeInsets.all(4), // Optional margin
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) =>
-                    const Center(child: CircularProgressIndicator()),
-                errorWidget: (context, url, error) =>
-                    const Icon(Icons.error, color: Colors.black),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const Icon(
-                Icons.more_horiz,
-              )
-            ],
-          ),
-            const SizedBox(height: 4),
-          ],
-        ),
-      ),
-    );
-  }
-}
